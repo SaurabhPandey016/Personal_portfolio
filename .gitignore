@@ -1,0 +1,32 @@
+# Node / Next
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.turbo/
+.vercel/
+*.tsbuildinfo
+
+# Environment files
+.env*
+!.env.example
+!.env.*.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Cache
+.cache/
+.parcel-cache/
