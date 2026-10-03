@@ -7,7 +7,7 @@ A responsive Next.js portfolio and a custom Express CMS backed by PostgreSQL thr
 - Client: Next.js 16, React 19, Tailwind CSS 4, Lucide React
 - Server: Express 5, Prisma 6, PostgreSQL/Supabase
 - Admin authentication: bcrypt password hashes and short-lived JWTs in HTTP-only cookies
-- Uploads: authenticated uploads of any file type up to 10 MB, stored in the existing PostgreSQL database
+- Uploads: authenticated uploads of any file type up to 10 MB, stored in the existing PostgreSQL database and reusable in CMS image/file fields
 
 ## Local Setup
 
@@ -63,15 +63,17 @@ When CMS collections are empty, the home page uses profile details, skills, educ
 - Authenticated `GET /api/{collection}?admin=true` includes drafts for the dashboard.
 - Authenticated `POST`, `PUT`, and `DELETE` routes manage collections; `PUT /api/about` saves the profile.
 - `POST /api/auth/login`, `POST /api/auth/refresh`, and `POST /api/auth/logout` manage the cookie session.
+- CMS sessions refresh automatically while the refresh cookie is valid; use the visible **Sign out** action in the dashboard top bar to end the session.
 - `POST /api/contact` stores a message. SMTP delivery is attempted only when valid `SMTP_*` and `CONTACT_TO` settings are configured; the response distinguishes sent, failed, and unconfigured email. Admins can review messages at `/api/messages`.
 - `POST /api/upload/image` accepts one authenticated multipart file in the `image` field (any file type, up to 10 MB). Uploaded media is listed at `GET /api/media` and served from PostgreSQL at the URL returned for each file.
+- The CMS Media workspace is a shared library: upload an image or document there, then select it in the profile photo, resume, project image, article cover, or testimonial author image fields. Selected project, profile, article, and testimonial images are rendered on their matching public sections.
 - `GET /api/health` is a database-independent health check.
 
 The API restricts CORS to `CLIENT_ORIGIN`; set this to the deployed client origin in production. HTTPS is required in production for secure cookies. The media API serves common raster images inline and downloads other file types as attachments. Uploaded file bytes count toward the PostgreSQL database's storage and backup usage.
 
 ## Deploy to Render and Vercel
 
-Before deploying, commit and push the project files to GitHub, but never add `server/.env` or `client/.env.local`. The API migration adds PostgreSQL columns for file storage; Render's startup command applies it automatically. It has not been applied to the configured database yet.
+Before deploying, commit and push the project files to GitHub, but never add `server/.env` or `client/.env.local`. Render's startup command applies pending PostgreSQL migrations automatically, including the media-storage and profile-image fields. The local configured database has already been migrated; production is migrated by its first successful Render deploy with these changes.
 
 1. **Rotate exposed credentials.** The Brevo SMTP key was shared in chat. Create a replacement key in Brevo before production, and use only the replacement in the following steps. Never put it in GitHub or Vercel.
 2. **Create the Render API service.** In Render, create a Blueprint from the GitHub repository and select the included `render.yaml`. Confirm the service root is `server`; the Blueprint runs `npm ci`, generates Prisma Client, applies pending migrations, and starts the API.

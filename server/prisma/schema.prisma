@@ -29,6 +29,7 @@ model About {
   linkedInUrl  String?
   githubUrl    String?
   resumeUrl    String?
+  profileImageUrl String?
   updatedAt    DateTime @updatedAt
 }
 

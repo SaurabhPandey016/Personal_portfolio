@@ -3,10 +3,10 @@ import { requireAuth } from "../middleware/auth.js";
 import { prisma } from "../db.js";
 
 const models = {
-  about: { delegate: "about", fields: ["fullName", "headline", "intro", "biography", "email", "location", "availability", "linkedInUrl", "githubUrl", "resumeUrl"] },
+  about: { delegate: "about", fields: ["fullName", "headline", "intro", "biography", "email", "location", "availability", "linkedInUrl", "githubUrl", "resumeUrl", "profileImageUrl"] },
   skills: { delegate: "skill", fields: ["name", "category", "level", "sortOrder", "published"] },
   projects: { delegate: "project", fields: ["title", "slug", "summary", "description", "role", "stack", "imageUrl", "websiteUrl", "sourceUrl", "featured", "published", "sortOrder"] },
-  blogs: { delegate: "blog", fields: ["title", "slug", "excerpt", "content", "category", "coverImage", "published", "publishedAt"] },
+  blogs: { delegate: "blog", fields: ["title", "slug", "excerpt", "content", "category", "coverImage", "published", "publishedAt"], orderBy: { createdAt: "desc" } },
   experience: { delegate: "experience", fields: ["title", "company", "location", "employment", "description", "startDate", "endDate", "sortOrder", "published"] },
   testimonials: { delegate: "testimonial", fields: ["quote", "author", "role", "company", "imageUrl", "sortOrder", "published"] },
   services: { delegate: "service", fields: ["title", "description", "icon", "sortOrder", "published"] },
@@ -54,7 +54,11 @@ router.get("/:resource", (request, response, next) => {
       return response.json({ item });
     }
     const where = request.query.admin === "true" ? {} : { published: true };
-    const items = await model.delegate.findMany({ where, orderBy: { sortOrder: "asc" }, take: 100 });
+    const items = await model.delegate.findMany({
+      where,
+      orderBy: model.config.orderBy ?? { sortOrder: "asc" },
+      take: 100,
+    });
     return response.json({ items });
   } catch (error) {
     return sendDatabaseError(error, response);

@@ -10,12 +10,13 @@ export type PortfolioData = {
     linkedInUrl?: string | null;
     githubUrl?: string | null;
     resumeUrl?: string | null;
+    profileImageUrl?: string | null;
   } | null;
   skills: { id: string; name: string; category: string }[];
   projects: { id: string; title: string; role?: string | null; summary: string; stack: string[]; websiteUrl?: string | null; sourceUrl?: string | null; imageUrl?: string | null }[];
   blogs: BlogPost[];
   experience: { id: string; title: string; company: string; startDate: string; endDate?: string | null; employment?: string | null; description: string }[];
-  testimonials: { id: string; quote: string; author: string; role?: string | null; company?: string | null }[];
+  testimonials: { id: string; quote: string; author: string; role?: string | null; company?: string | null; imageUrl?: string | null }[];
   services: { id: string; title: string; description: string }[];
 };
 

@@ -43,6 +43,7 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
   const resumeUrl = content.about?.resumeUrl || "https://drive.google.com/file/d/1Uxc95FExlDoTApGnPHJVorrv4ZdLcKI4/view";
   const resumeId = resumeUrl.match(/\/file\/d\/([^/]+)/)?.[1];
   const resumeDownloadUrl = resumeId ? `https://drive.google.com/uc?export=download&id=${resumeId}` : resumeUrl;
+  const profileImageUrl = content.about?.profileImageUrl || "https://lh3.googleusercontent.com/d/1ZGdcVOGRoQ03LZqP_opTnUrX3wWIS5SO=w1200";
   const visibleProjects = content.projects.map((project) => ({
     name: project.title,
     type: project.role || project.stack.join(" · ") || "Selected project",
@@ -50,6 +51,7 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
     href: project.websiteUrl || "#contact",
     sourceUrl: project.sourceUrl,
     stack: project.stack,
+    imageUrl: project.imageUrl,
   }));
   const visibleServices = content.services;
   const visibleSkills = Object.entries(Object.groupBy(content.skills, (skill) => skill.category)).map(([label, items]) => ({
@@ -68,6 +70,7 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
     date: article.publishedAt ? new Date(article.publishedAt).toLocaleDateString("en", { month: "short", year: "numeric" }) : "LATEST",
     title: article.title,
     slug: article.slug,
+    coverImage: article.coverImage,
   }));
   const visibleTestimonials = content.testimonials;
 
@@ -119,7 +122,7 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
             </div>
             <div className="hero-art">
               <div className="art-grid" /><div className="art-orbit" />
-              <Image className="hero-avatar" src="https://lh3.googleusercontent.com/d/1ZGdcVOGRoQ03LZqP_opTnUrX3wWIS5SO=w1200" alt="Saurabh Pandey" width={1200} height={1200} sizes="(max-width: 650px) 150px, 184px" quality={88} priority />
+              <Image unoptimized className="hero-avatar" src={profileImageUrl} alt={displayName} width={1200} height={1200} sizes="(max-width: 650px) 150px, 184px" priority />
               <div className="art-panel"><div className="art-panel-top"><span className="art-panel-label">Currently seeking</span><span className="art-panel-status">Open</span></div><div className="art-panel-title">Software engineering roles</div><div className="art-panel-meta"><span>Entry-level</span><span>Intern</span><span>Associate</span></div></div>
             </div>
           </div>
@@ -133,7 +136,7 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
 
         <section className="section" id="projects"><div className="wrap">
           <div className="section-heading"><div><span className="eyebrow">Selected full-stack projects</span><h2>Built to solve<br />real workflows.</h2></div><p>Five projects from my public GitHub work, spanning file sharing, assessments, insurance operations, healthcare, and e-commerce.</p></div>
-          <div className="project-grid">{visibleProjects.map((project, index) => { const Icon = projectIcons[index % projectIcons.length]; return <Card className="project-card" key={project.name}><CardContent className="project-card-content"><div className="project-card-top"><span className="project-symbol"><Icon aria-hidden="true" /></span><span className="project-number">0{index + 1} / 0{visibleProjects.length}</span></div><Badge variant="outline" className="project-type">{project.type}</Badge><h3 className="project-name">{project.name}</h3><p className="project-desc">{project.description}</p><div className="project-stack">{project.stack.map((technology) => <Badge variant="secondary" key={technology}>{technology}</Badge>)}</div><div className="project-actions"><Button nativeButton={false} variant="ghost" size="sm" render={<a href={project.href} target="_blank" rel="noreferrer" />}>View project <ArrowUpRight aria-hidden="true" /></Button>{project.sourceUrl && <Button nativeButton={false} variant="ghost" size="sm" render={<a href={project.sourceUrl} target="_blank" rel="noreferrer" />}>Source <CodeXml aria-hidden="true" /></Button>}</div></CardContent></Card>; })}</div>
+          <div className="project-grid">{visibleProjects.map((project, index) => { const Icon = projectIcons[index % projectIcons.length]; return <Card className="project-card" key={project.name}>{project.imageUrl && <Image unoptimized className="project-cover" src={project.imageUrl} alt={`${project.name} project`} width={900} height={560} />}<CardContent className="project-card-content"><div className="project-card-top"><span className="project-symbol"><Icon aria-hidden="true" /></span><span className="project-number">0{index + 1} / 0{visibleProjects.length}</span></div><Badge variant="outline" className="project-type">{project.type}</Badge><h3 className="project-name">{project.name}</h3><p className="project-desc">{project.description}</p><div className="project-stack">{project.stack.map((technology) => <Badge variant="secondary" key={technology}>{technology}</Badge>)}</div><div className="project-actions"><Button nativeButton={false} variant="ghost" size="sm" render={<a href={project.href} target="_blank" rel="noreferrer" />}>View project <ArrowUpRight aria-hidden="true" /></Button>{project.sourceUrl && <Button nativeButton={false} variant="ghost" size="sm" render={<a href={project.sourceUrl} target="_blank" rel="noreferrer" />}>Source <CodeXml aria-hidden="true" /></Button>}</div></CardContent></Card>; })}</div>
         </div></section>
 
         <section className="section" id="services"><div className="wrap">
@@ -157,9 +160,9 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
           <div className="experience-list">{visibleRoles.map((role) => <article className="experience" key={role.role}><span className="experience-date">{role.dates}</span><div><h3>{role.role}</h3><span className="experience-company">{role.company}</span><p>{role.detail}</p></div><span className="experience-kind">{role.type}</span></article>)}</div>
         </div></section>
 
-        {visibleTestimonials.length > 0 && <section className="section" id="testimonials"><div className="wrap testimonial-wrap"><span className="eyebrow">Testimonials</span>{visibleTestimonials.map((testimonial) => <div key={testimonial.id}><blockquote>“{testimonial.quote}”</blockquote><p className="testimonial-credit"><span className="testimonial-avatar">{testimonial.author.slice(0, 2).toUpperCase()}</span><span><strong>{testimonial.author}</strong><br />{[testimonial.role, testimonial.company].filter(Boolean).join(", ")}</span></p></div>)}</div></section>}
+        {visibleTestimonials.length > 0 && <section className="section" id="testimonials"><div className="wrap testimonial-wrap"><span className="eyebrow">Testimonials</span>{visibleTestimonials.map((testimonial) => <div key={testimonial.id}><blockquote>“{testimonial.quote}”</blockquote><p className="testimonial-credit">{testimonial.imageUrl ? <Image unoptimized className="testimonial-avatar-image" src={testimonial.imageUrl} alt={testimonial.author} width={76} height={76} /> : <span className="testimonial-avatar">{testimonial.author.slice(0, 2).toUpperCase()}</span>}<span><strong>{testimonial.author}</strong><br />{[testimonial.role, testimonial.company].filter(Boolean).join(", ")}</span></p></div>)}</div></section>}
 
-        {visibleArticles.length > 0 && <section className="section" id="writing"><div className="wrap"><div className="section-heading"><div><span className="eyebrow">Writing</span><h2>Notes from<br />the work.</h2></div><p>Articles and notes published through the portfolio CMS.</p></div><div className="writing-grid">{visibleArticles.map((article) => <Card className="article" key={article.title}><Link href={`/blog/${article.slug}`}><div className="article-meta"><Badge variant="outline">{article.category}</Badge><span>{article.date}</span></div><h3>{article.title}</h3><div className="article-bottom"><span>Read the note</span><ArrowUpRight aria-hidden="true" /></div></Link></Card>)}</div><Link className="all-writing-link" href="/blog">Explore all writing <ArrowRight aria-hidden="true" /></Link></div></section>}
+        {visibleArticles.length > 0 && <section className="section" id="writing"><div className="wrap"><div className="section-heading"><div><span className="eyebrow">Writing</span><h2>Notes from<br />the work.</h2></div><p>Articles and notes published through the portfolio CMS.</p></div><div className="writing-grid">{visibleArticles.map((article) => <Card className="article" key={article.title}><Link href={`/blog/${article.slug}`}>{article.coverImage && <Image unoptimized className="article-card-cover" src={article.coverImage} alt="" width={700} height={420} />}<div className="article-meta"><Badge variant="outline">{article.category}</Badge><span>{article.date}</span></div><h3>{article.title}</h3><div className="article-bottom"><span>Read the note</span><ArrowUpRight aria-hidden="true" /></div></Link></Card>)}</div><Link className="all-writing-link" href="/blog">Explore all writing <ArrowRight aria-hidden="true" /></Link></div></section>}
 
         <section className="contact-section" id="contact"><div className="wrap">
           <span className="eyebrow">Open to opportunities</span>

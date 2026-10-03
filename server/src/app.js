@@ -34,10 +34,23 @@ app.use("/api/media", uploadRoutes);
 app.use("/api", contentRoutes);
 app.use("/api/upload", uploadRoutes);
 
-app.use((error, _request, response, _next) => {
-  console.error("API request failed.");
+app.use((error, request, response, _next) => {
+  const errorCode = typeof error?.code === "string" ? error.code : "UNKNOWN";
+  console.error("API request failed.", { method: request.method, path: request.path, code: errorCode });
   if (response.headersSent) return;
   if (error.code === "P2002") return response.status(409).json({ error: "That unique value is already in use." });
+  if (error.code === "P2022" && /Media.*(?:data|originalName)|(?:data|originalName).*Media|About.*profileImageUrl/i.test(String(error.meta?.column ?? ""))) {
+    return response.status(503).json({ error: "The database is missing media fields. Deploy the latest server migrations, then retry this action." });
+  }
+  if (error.code === "P2021" && /Media/i.test(String(error.meta?.table ?? ""))) {
+    return response.status(503).json({ error: "The media table is not ready. Apply the pending database migrations, then try again." });
+  }
+  if (["P1001", "P1002", "P1017"].includes(error.code)) {
+    return response.status(503).json({ error: "The database is temporarily unavailable. Please try again shortly." });
+  }
+  if (["P2000", "P2006"].includes(error.code)) {
+    return response.status(400).json({ error: "The uploaded file or its details are not supported." });
+  }
   return response.status(500).json({ error: "The request could not be completed." });
 });
 
