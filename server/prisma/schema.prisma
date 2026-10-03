@@ -115,13 +115,15 @@ model Service {
 }
 
 model Media {
-  id        String   @id @default(cuid())
-  filename  String
-  url       String
-  mimeType  String
-  size      Int
-  altText   String?
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String?
+  url          String
+  mimeType     String
+  size         Int
+  data         Bytes?
+  altText      String?
+  createdAt    DateTime @default(now())
 }
 
 model Message {

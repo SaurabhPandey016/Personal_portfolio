@@ -184,7 +184,7 @@ try {
       headline: "Full-Stack Developer (MERN)",
       intro: "Full Stack Developer Trainee at AlmaBetter, building responsive React interfaces and robust Node.js APIs. Open to software engineering, frontend, and full-stack roles, including internships and associate positions.",
       biography: "I'm a full-stack developer trainee based in Madhya Pradesh, India, with a B.Tech in Electrical Engineering from AKS University. I build complete web applications with React, Node.js, Express, and MongoDB, and practice data structures and algorithms through coding platforms. My project work includes healthcare appointments, e-commerce, cloud file workflows, assessments, and insurance operations.",
-      email: "developersaurabh04@gmail.com",
+      email: "developersaurabh001@gmail.com",
       location: "Madhya Pradesh, India",
       availability: "Open to entry-level, internship, and associate roles · Remote or on-site",
       linkedInUrl: "https://www.linkedin.com/in/saurabhpandey-/",

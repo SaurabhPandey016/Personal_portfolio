@@ -12,24 +12,20 @@ import {
   CodeXml,
   Download,
   HeartPulse,
-  Menu,
   Phone,
   ShieldCheck,
   ShoppingBag,
   Send,
   Trophy,
-  X,
 } from "lucide-react";
 import type { PortfolioData } from "@/lib/portfolio-data";
 import Link from "next/link";
-
-const navigation = [
-  ["About", "about"],
-  ["Work", "projects"],
-  ["Skills", "skills"],
-  ["Experience", "experience"],
-  ["Contact", "contact"],
-] as const;
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 
 const projectIcons = [Cloud, ClipboardCheck, ShieldCheck, HeartPulse, ShoppingBag];
 const codingProfiles = [
@@ -39,7 +35,6 @@ const codingProfiles = [
 ];
 
 export default function Portfolio({ content }: { content: PortfolioData }) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [formStatus, setFormStatus] = useState("");
   const displayName = content.about?.fullName || "Saurabh Pandey";
@@ -90,8 +85,13 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
         body: JSON.stringify(message),
       });
       if (!response.ok) throw new Error("The message could not be sent.");
+      const result = await response.json() as { emailSent?: boolean; emailStatus?: "sent" | "failed" | "not_configured" };
       formElement.reset();
-      setFormStatus("Thanks for reaching out. Your note is on its way.");
+      setFormStatus(result.emailStatus === "sent"
+        ? "Thanks for reaching out. Your note is on its way."
+        : result.emailStatus === "failed"
+          ? "Your message was saved, but its email notification could not be delivered. Please use LinkedIn or GitHub to follow up."
+          : "Your message was saved. Email notifications are not configured yet.");
     } catch {
       setFormStatus("The message API is unavailable. Please reach me through LinkedIn or GitHub.");
     } finally {
@@ -99,36 +99,23 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
     }
   }
 
-  function closeMenu() {
-    setMenuOpen(false);
-  }
-
   return (
     <div className="site-shell">
-      <header className="site-header">
-        <div className="wrap header-inner">
-          <a className="brand" href="#home" aria-label={`${displayName} home`} onClick={closeMenu}>
-            <span className="brand-mark"><CodeXml aria-hidden="true" /></span>
-            <span>{displayName.toUpperCase()}<span className="brand-caption">{content.about?.headline || "FULL-STACK DEVELOPER"}</span></span>
-          </a>
-          <nav className={`nav-list${menuOpen ? " is-open" : ""}`} aria-label="Main navigation">
-            {navigation.map(([label, id]) => <a className="nav-link" href={`#${id}`} key={id} onClick={closeMenu}>{label}</a>)}
-          </nav>
-          <a className="header-contact" href={content.about?.githubUrl || "https://github.com/SaurabhPandey016"} target="_blank" rel="noreferrer">GitHub profile <ArrowUpRight aria-hidden="true" /></a>
-          <button className="mobile-toggle" type="button" aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
-            {menuOpen ? <X /> : <Menu />}
-          </button>
-        </div>
-      </header>
+      <SiteHeader name={displayName} headline={content.about?.headline || "FULL-STACK DEVELOPER"} githubUrl={content.about?.githubUrl} />
 
       <main>
         <section className="hero wrap" id="home">
-          <div className="hero-topline"><span className="eyebrow">Saurabh Pandey · India</span><span className="availability"><span className="availability-dot" /> Open to entry-level roles</span></div>
+          <div className="hero-topline"><span className="eyebrow">Full-stack developer · India</span><Badge variant="outline" className="availability"><span className="availability-dot" /> Open to entry-level roles</Badge></div>
           <div className="hero-grid">
             <div className="reveal">
-              <h1>Building for<br />the <em>real world.</em></h1>
+              <span className="hero-kicker">Design-minded engineer. End-to-end builder.</span>
+              <h1>Ideas into<br /><em>impact.</em></h1>
               <p className="hero-copy">{content.about?.intro}</p>
-              <div className="hero-actions"><a className="primary-link" href="#projects">Explore my work <ArrowDown aria-hidden="true" /></a><a className="arrow-link" href={resumeDownloadUrl} target="_blank" rel="noreferrer">Download resume <Download aria-hidden="true" /></a></div>
+              <div className="hero-actions">
+                <Button nativeButton={false} render={<a href="#projects" />} className="primary-link">Explore my work <ArrowDown aria-hidden="true" /></Button>
+                <Button nativeButton={false} variant="outline" render={<a href={resumeDownloadUrl} target="_blank" rel="noreferrer" />} className="resume-link">Download resume <Download aria-hidden="true" /></Button>
+              </div>
+              <div className="hero-social-proof"><span className="availability-dot" /> Available for meaningful opportunities</div>
             </div>
             <div className="hero-art">
               <div className="art-grid" /><div className="art-orbit" />
@@ -136,7 +123,7 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
               <div className="art-panel"><div className="art-panel-top"><span className="art-panel-label">Currently seeking</span><span className="art-panel-status">Open</span></div><div className="art-panel-title">Software engineering roles</div><div className="art-panel-meta"><span>Entry-level</span><span>Intern</span><span>Associate</span></div></div>
             </div>
           </div>
-          <div className="hero-bottom"><p>Based in <span>{location}</span></p><p>Open to <span>remote or on-site</span></p><p>Focus <span>MERN stack</span></p><p>Also learning <span>TypeScript</span></p></div>
+          <div className="hero-bottom"><p>Based in <span>{location}</span></p><p>Open to <span>remote or on-site</span></p><p>Focus <span>MERN stack</span></p><p>Building with <span>curiosity & care</span></p></div>
         </section>
 
         <section className="section" id="about"><div className="wrap about-grid">
@@ -146,12 +133,12 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
 
         <section className="section" id="projects"><div className="wrap">
           <div className="section-heading"><div><span className="eyebrow">Selected full-stack projects</span><h2>Built to solve<br />real workflows.</h2></div><p>Five projects from my public GitHub work, spanning file sharing, assessments, insurance operations, healthcare, and e-commerce.</p></div>
-          <div className="project-list">{visibleProjects.map((project, index) => { const Icon = projectIcons[index % projectIcons.length]; return <article className="project" key={project.name}><span className="project-number">0{index + 1}</span><span className="project-symbol"><Icon aria-hidden="true" /></span><div className="project-main"><span className="project-name">{project.name}</span><span className="project-type">{project.type}</span><p className="project-desc">{project.description}</p><div className="project-stack">{project.stack.map((technology) => <span key={technology}>{technology}</span>)}</div><div className="project-actions"><a href={project.href} target="_blank" rel="noreferrer">Open demo <ArrowUpRight aria-hidden="true" /></a>{project.sourceUrl && <a href={project.sourceUrl} target="_blank" rel="noreferrer">Source code <ArrowUpRight aria-hidden="true" /></a>}</div></div><ArrowUpRight className="project-arrow" aria-hidden="true" /></article>; })}</div>
+          <div className="project-grid">{visibleProjects.map((project, index) => { const Icon = projectIcons[index % projectIcons.length]; return <Card className="project-card" key={project.name}><CardContent className="project-card-content"><div className="project-card-top"><span className="project-symbol"><Icon aria-hidden="true" /></span><span className="project-number">0{index + 1} / 0{visibleProjects.length}</span></div><Badge variant="outline" className="project-type">{project.type}</Badge><h3 className="project-name">{project.name}</h3><p className="project-desc">{project.description}</p><div className="project-stack">{project.stack.map((technology) => <Badge variant="secondary" key={technology}>{technology}</Badge>)}</div><div className="project-actions"><Button nativeButton={false} variant="ghost" size="sm" render={<a href={project.href} target="_blank" rel="noreferrer" />}>View project <ArrowUpRight aria-hidden="true" /></Button>{project.sourceUrl && <Button nativeButton={false} variant="ghost" size="sm" render={<a href={project.sourceUrl} target="_blank" rel="noreferrer" />}>Source <CodeXml aria-hidden="true" /></Button>}</div></CardContent></Card>; })}</div>
         </div></section>
 
         <section className="section" id="services"><div className="wrap">
           <div className="section-heading"><div><span className="eyebrow">What I build</span><h2>Full-stack work,<br />from UI to data.</h2></div><p>My projects bring together the frontend, backend, and product workflows rather than treating them as separate pieces.</p></div>
-          <div className="service-grid">{visibleServices.map((service, index) => <article className="service" key={service.title}><div className="service-top"><span className="service-number">0{index + 1}</span><ArrowRight className="service-icon" aria-hidden="true" /></div><h3>{service.title}</h3><p>{service.description}</p></article>)}</div>
+          <div className="service-grid">{visibleServices.map((service, index) => <Card className="service" key={service.title}><CardContent><div className="service-top"><Badge variant="outline" className="service-number">0{index + 1}</Badge><ArrowRight className="service-icon" aria-hidden="true" /></div><h3>{service.title}</h3><p>{service.description}</p></CardContent></Card>)}</div>
         </div></section>
 
         <section className="section" id="skills"><div className="wrap skill-layout">
@@ -161,7 +148,7 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
 
         <section className="section" id="practice"><div className="wrap">
           <div className="section-heading"><div><span className="eyebrow">Coding practice</span><h2>Learning by<br /><em>doing the work.</em></h2></div><p>Numbers and profiles listed in my current resume. Visit the platforms for the latest activity.</p></div>
-          <div className="achievement-grid">{codingProfiles.map((profile) => <a className="achievement" href={profile.href} target="_blank" rel="noreferrer" key={profile.label}><Trophy aria-hidden="true" /><strong>{profile.value}</strong><span>{profile.label}</span><small>{profile.detail}</small><ArrowUpRight className="achievement-link" aria-hidden="true" /></a>)}</div>
+          <div className="achievement-grid">{codingProfiles.map((profile) => <Card className="achievement" key={profile.label}><a href={profile.href} target="_blank" rel="noreferrer"><Trophy aria-hidden="true" /><strong>{profile.value}</strong><span>{profile.label}</span><small>{profile.detail}</small><ArrowUpRight className="achievement-link" aria-hidden="true" /></a></Card>)}</div>
           <div className="certification-links"><span>TRAINING & CERTIFICATES</span><a href="https://files.codingninjas.in/certi_image1860592e5d9e803ce88eebc79ef14ce8f0f219.jpg" target="_blank" rel="noreferrer">Data Structures & Algorithms · Coding Ninjas <ArrowUpRight aria-hidden="true" /></a><a href="https://verified.sertifier.com/en/verify/68027376016799/" target="_blank" rel="noreferrer">Full-Stack Development · AlmaBetter <ArrowUpRight aria-hidden="true" /></a></div>
         </div></section>
 
@@ -172,17 +159,17 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
 
         {visibleTestimonials.length > 0 && <section className="section" id="testimonials"><div className="wrap testimonial-wrap"><span className="eyebrow">Testimonials</span>{visibleTestimonials.map((testimonial) => <div key={testimonial.id}><blockquote>“{testimonial.quote}”</blockquote><p className="testimonial-credit"><span className="testimonial-avatar">{testimonial.author.slice(0, 2).toUpperCase()}</span><span><strong>{testimonial.author}</strong><br />{[testimonial.role, testimonial.company].filter(Boolean).join(", ")}</span></p></div>)}</div></section>}
 
-        {visibleArticles.length > 0 && <section className="section" id="writing"><div className="wrap"><div className="section-heading"><div><span className="eyebrow">Writing</span><h2>Notes from<br />the work.</h2></div><p>Articles and notes published through the portfolio CMS.</p></div><div className="writing-grid">{visibleArticles.map((article) => <Link className="article" href={`/blog/${article.slug}`} key={article.title}><div className="article-meta"><span>{article.category}</span><span>{article.date}</span></div><h3>{article.title}</h3><div className="article-bottom"><span>Read the note</span><ArrowUpRight aria-hidden="true" /></div></Link>)}</div></div></section>}
+        {visibleArticles.length > 0 && <section className="section" id="writing"><div className="wrap"><div className="section-heading"><div><span className="eyebrow">Writing</span><h2>Notes from<br />the work.</h2></div><p>Articles and notes published through the portfolio CMS.</p></div><div className="writing-grid">{visibleArticles.map((article) => <Card className="article" key={article.title}><Link href={`/blog/${article.slug}`}><div className="article-meta"><Badge variant="outline">{article.category}</Badge><span>{article.date}</span></div><h3>{article.title}</h3><div className="article-bottom"><span>Read the note</span><ArrowUpRight aria-hidden="true" /></div></Link></Card>)}</div><Link className="all-writing-link" href="/blog">Explore all writing <ArrowRight aria-hidden="true" /></Link></div></section>}
 
         <section className="contact-section" id="contact"><div className="wrap">
           <span className="eyebrow">Open to opportunities</span>
           <div className="contact-layout"><div><h2>Let&apos;s build<br />something <em>useful.</em></h2><p className="contact-intro">I&apos;m looking for entry-level, internship, and associate opportunities in software engineering, frontend, and full-stack development.</p>{contactEmail && <a className="contact-email" href={`mailto:${contactEmail}`}>{contactEmail} <ArrowUpRight aria-hidden="true" /></a>}<a className="contact-email" href="tel:+918720026790"><Phone aria-hidden="true" /> +91 87200 26790</a></div>
-            <form className="contact-form" onSubmit={handleContact}><div className="form-row"><label>Your name<input name="name" autoComplete="name" placeholder="How should I address you?" required /></label><label>Email address<input name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></label></div><label>What are you thinking about?<textarea name="message" placeholder="A few lines is plenty..." required /></label><button className="submit-button" type="submit" disabled={sending}>{sending ? "Sending..." : "Send a note"}{formStatus.startsWith("Thanks") ? <Check /> : <Send />}</button><p className="form-status" aria-live="polite">{formStatus}</p></form>
+            <form className="contact-form" onSubmit={handleContact}><div className="form-row"><label>Your name<Input name="name" autoComplete="name" placeholder="How should I address you?" required /></label><label>Email address<Input name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></label></div><label>What are you thinking about?<Textarea name="message" placeholder="A few lines is plenty..." required rows={5} /></label><Button className="submit-button" type="submit" disabled={sending}>{sending ? "Sending..." : "Send a note"}{formStatus.startsWith("Thanks") ? <Check /> : <Send />}</Button><p className="form-status" aria-live="polite">{formStatus}</p></form>
           </div>
         </div></section>
       </main>
 
-      <footer className="site-footer"><div className="wrap footer-inner"><span className="footer-note">© 2026 {displayName.toUpperCase()} · BUILT WITH REACT AND NODE.JS</span><div className="footer-links"><a href={content.about?.linkedInUrl || "https://www.linkedin.com/in/saurabhpandey-/"} target="_blank" rel="noreferrer">LinkedIn</a><a href={content.about?.githubUrl || "https://github.com/SaurabhPandey016"} target="_blank" rel="noreferrer">GitHub</a><a href="https://leetcode.com/u/Saurabh8720/" target="_blank" rel="noreferrer">LeetCode</a>{contactEmail && <a href={`mailto:${contactEmail}`}>Email</a>}<a href="/admin">CMS login</a></div></div></footer>
+      <SiteFooter name={displayName} email={contactEmail} linkedInUrl={content.about?.linkedInUrl} githubUrl={content.about?.githubUrl} />
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import { Newsreader, Space_Grotesk, Space_Mono } from "next/font/google";
+import { Space_Grotesk, Space_Mono, Geist } from "next/font/google";
 import "./globals.css";
+
+const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -13,11 +15,6 @@ const spaceMono = Space_Mono({
   weight: ["400", "700"],
 });
 
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
   title: "Saurabh Pandey — Full-Stack Developer",
   description:
@@ -26,7 +23,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${spaceMono.variable} ${newsreader.variable}`}>
+    <html lang="en" className={`${spaceGrotesk.variable} ${spaceMono.variable} ${geist.variable}`}>
       <body>{children}</body>
     </html>
   );

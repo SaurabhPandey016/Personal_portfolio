@@ -3,10 +3,18 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Check, FileImage, LogOut, Plus, Save, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Check, FileImage, FileText, LogOut, Plus, Save, Trash2, Upload } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:10000/api";
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
+
+function resolveMediaUrl(url: string) {
+  return url.startsWith("http://") || url.startsWith("https://") ? url : `${API_ORIGIN}${url}`;
+}
 
 type Field = { key: string; label: string; kind?: "textarea" | "boolean" | "tags" | "number" | "date"; required?: boolean };
 type CmsRecord = Record<string, string | number | boolean | null | undefined>;
@@ -203,16 +211,16 @@ export default function AdminDashboard() {
   async function handleUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formElement = event.currentTarget;
-    const image = new FormData(formElement).get("image");
-    if (!(image instanceof File) || image.size === 0) return setError("Choose an image to upload.");
+    const file = new FormData(formElement).get("image");
+    if (!(file instanceof File) || file.size === 0) return setError("Choose a file to upload.");
     const body = new FormData();
-    body.append("image", image);
+    body.append("image", file);
     setBusy(true);
     setError("");
     try {
       await request("/upload/image", { method: "POST", body });
       formElement.reset();
-      setNotice("Image uploaded.");
+      setNotice("File uploaded.");
       setRefresh((value) => value + 1);
     } catch (uploadError) {
       setError((uploadError as Error).message);
@@ -233,7 +241,7 @@ export default function AdminDashboard() {
             <label>Email address<input type="email" autoComplete="username" value={login.email} onChange={(event) => setLogin({ ...login, email: event.target.value })} required /></label>
             <label>Password<input type="password" autoComplete="current-password" value={login.password} onChange={(event) => setLogin({ ...login, password: event.target.value })} required /></label>
             {error && <p className="admin-alert" role="alert">{error}</p>}
-            <button className="admin-primary" disabled={busy}>{busy ? "Signing in..." : "Sign in"}</button>
+            <Button className="admin-primary" disabled={busy}>{busy ? "Signing in..." : "Sign in"}</Button>
           </form>
         </section>
       </main>
@@ -255,7 +263,7 @@ export default function AdminDashboard() {
         <header className="admin-topbar"><Link href="/" className="admin-back"><ArrowLeft size={14} /> View portfolio</Link><span className="admin-user">{user.name}</span></header>
         <div className="admin-content">
           <div className="admin-page-heading"><div><span className="eyebrow">Content management</span><h1>{section.label}</h1></div>
-            {section.fields && !section.single && <button className="admin-primary admin-add" onClick={openNewForm}><Plus size={15} /> Add {section.label.slice(0, -1)}</button>}
+            {section.fields && !section.single && <Button className="admin-primary admin-add" onClick={openNewForm}><Plus size={15} /> Add {section.label.slice(0, -1)}</Button>}
           </div>
           {notice && <p className="admin-notice"><Check size={15} /> {notice}</p>}
           {error && <p className="admin-alert" role="alert">{error}</p>}
@@ -263,12 +271,12 @@ export default function AdminDashboard() {
           {activeKey === "overview" && <div className="admin-overview"><p className="admin-lead">Your portfolio workspace is ready. Choose a section to update what visitors see.</p><div className="admin-stats">{Object.entries(counts).map(([key, count]) => <button key={key} onClick={() => setActiveKey(key)}><span>{sections.find((item) => item.key === key)?.label ?? key}</span><strong>{count}</strong></button>)}</div><div className="admin-quick-links"><span>QUICK ACCESS</span>{["about", "projects", "skills", "experience"].map((key) => <button key={key} onClick={() => setActiveKey(key)}>{sections.find((item) => item.key === key)?.label}<ArrowLeft size={14} /></button>)}</div></div>}
 
           {section.fields && <>
-            {section.single ? <form className="admin-editor" onSubmit={handleSave}><RecordFields fields={section.fields} draft={draft} setDraft={setDraft} /><button className="admin-primary" disabled={busy}><Save size={15} /> Save profile</button></form> : formOpen ? <form className="admin-editor" onSubmit={handleSave}><div className="admin-editor-heading"><h2>{editingId ? "Edit item" : `New ${section.label.slice(0, -1)}`}</h2><button type="button" className="admin-text-button" onClick={() => setFormOpen(false)}>Cancel</button></div><RecordFields fields={section.fields} draft={draft} setDraft={setDraft} /><button className="admin-primary" disabled={busy}><Save size={15} /> {busy ? "Saving..." : "Save changes"}</button></form> : <ItemList items={items} resource={activeKey} onEdit={openEditForm} onDelete={handleDelete} />}
+            {section.single ? <form className="admin-editor" onSubmit={handleSave}><RecordFields fields={section.fields} draft={draft} setDraft={setDraft} /><Button className="admin-primary" disabled={busy}><Save size={15} /> Save profile</Button></form> : formOpen ? <form className="admin-editor" onSubmit={handleSave}><div className="admin-editor-heading"><h2>{editingId ? "Edit item" : `New ${section.label.slice(0, -1)}`}</h2><button type="button" className="admin-text-button" onClick={() => setFormOpen(false)}>Cancel</button></div><RecordFields fields={section.fields} draft={draft} setDraft={setDraft} /><Button className="admin-primary" disabled={busy}><Save size={15} /> {busy ? "Saving..." : "Save changes"}</Button></form> : <ItemList items={items} resource={activeKey} onEdit={openEditForm} onDelete={handleDelete} />}
           </>}
 
           {activeKey === "messages" && <div className="admin-message-list">{items.map((item) => <article className="admin-message" key={String(item.id)}><div><div className="admin-message-meta"><strong>{String(item.name)}</strong><a href={`mailto:${String(item.email)}`}>{String(item.email)}</a><span>{new Date(String(item.createdAt)).toLocaleDateString()}</span></div><p>{String(item.message)}</p>{item.subject && <span className="admin-message-subject">{String(item.subject)}</span>}</div><select aria-label={`Status for message from ${String(item.name)}`} value={String(item.status)} onChange={async (event) => { await request(`/messages/${String(item.id)}`, { method: "PATCH", body: JSON.stringify({ status: event.target.value }) }); setRefresh((value) => value + 1); }}><option value="NEW">New</option><option value="READ">Read</option><option value="ARCHIVED">Archived</option></select></article>)}{items.length === 0 && <p className="admin-empty">No messages yet.</p>}</div>}
 
-          {activeKey === "media" && <><form className="admin-upload" onSubmit={handleUpload}><label><FileImage size={18} /> Choose an image<input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" required /></label><button className="admin-primary" disabled={busy}><Upload size={15} /> Upload · max 5 MB</button></form><div className="admin-media-grid">{items.map((item) => <article className="admin-media-item" key={String(item.id)}><Image unoptimized width={640} height={480} src={`${API_ORIGIN}${String(item.url)}`} alt={String(item.altText ?? item.filename)} /><span>{String(item.filename)}</span><button className="admin-copy-button" onClick={() => navigator.clipboard.writeText(`${API_ORIGIN}${String(item.url)}`)}>Copy URL</button></article>)}</div>{items.length === 0 && <p className="admin-empty">Uploaded images will appear here.</p>}</>}
+          {activeKey === "media" && <><form className="admin-upload" onSubmit={handleUpload}><label><FileImage size={18} /> Choose a file<input type="file" name="image" required /></label><Button className="admin-primary" disabled={busy}><Upload size={15} /> Upload · max 10 MB</Button></form><div className="admin-media-grid">{items.map((item) => { const url = resolveMediaUrl(String(item.url)); const previewableImage = ["image/avif", "image/gif", "image/jpeg", "image/png", "image/webp"].includes(String(item.mimeType)); return <article className="admin-media-item" key={String(item.id)}>{previewableImage ? <Image unoptimized width={640} height={480} src={url} alt={String(item.originalName ?? item.filename)} /> : <a className="admin-file-preview" href={url}><FileText size={44} aria-hidden="true" /><span>Download file</span></a>}<span>{String(item.originalName ?? item.filename)}</span><Button variant="outline" className="admin-copy-button" onClick={() => navigator.clipboard.writeText(url)}>Copy URL</Button></article>; })}</div>{items.length === 0 && <p className="admin-empty">Uploaded files will appear here.</p>}</>}
         </div>
       </main>
     </div>
@@ -278,12 +286,12 @@ export default function AdminDashboard() {
 function RecordFields({ fields, draft, setDraft }: { fields: Field[]; draft: CmsRecord; setDraft: (value: CmsRecord) => void }) {
   return <div className="admin-fields">{fields.map((field) => <label className={`admin-field${field.kind === "textarea" ? " wide" : ""}`} key={field.key}>{field.label}
     {field.kind === "boolean" ? <span className="admin-toggle"><input type="checkbox" checked={Boolean(draft[field.key])} onChange={(event) => setDraft({ ...draft, [field.key]: event.target.checked })} /><span>{draft[field.key] ? "Published" : "Not published"}</span></span>
-      : field.kind === "textarea" ? <textarea value={String(draft[field.key] ?? "")} required={field.required} rows={4} onChange={(event) => setDraft({ ...draft, [field.key]: event.target.value })} />
-      : <input type={field.kind === "number" ? "number" : field.kind === "date" ? "date" : "text"} value={formatValue(draft[field.key], field)} required={field.required} onChange={(event) => setDraft({ ...draft, [field.key]: field.kind === "number" ? Number(event.target.value) : event.target.value })} />}
+      : field.kind === "textarea" ? <Textarea value={String(draft[field.key] ?? "")} required={field.required} rows={4} onChange={(event) => setDraft({ ...draft, [field.key]: event.target.value })} />
+      : <Input type={field.kind === "number" ? "number" : field.kind === "date" ? "date" : "text"} value={formatValue(draft[field.key], field)} required={field.required} onChange={(event) => setDraft({ ...draft, [field.key]: field.kind === "number" ? Number(event.target.value) : event.target.value })} />}
   </label>)}</div>;
 }
 
 function ItemList({ items, resource, onEdit, onDelete }: { items: CmsRecord[]; resource: string; onEdit: (item: CmsRecord) => void; onDelete: (item: CmsRecord) => void }) {
   if (!items.length) return <p className="admin-empty">Nothing here yet. Add your first {resource.slice(0, -1)}.</p>;
-  return <div className="admin-item-list">{items.map((item) => <article className="admin-item" key={String(item.id)}><div><h2>{String(item.title ?? item.name ?? item.author ?? item.quote ?? "Untitled")}</h2><p>{String(item.summary ?? item.description ?? item.category ?? item.company ?? "")}</p><span className={`admin-status${item.published ? " published" : ""}`}>{item.published ? "Published" : "Draft"}</span></div><div className="admin-item-actions"><button onClick={() => onEdit(item)} aria-label="Edit item">Edit</button><button className="danger" onClick={() => onDelete(item)} aria-label="Delete item"><Trash2 size={15} /></button></div></article>)}</div>;
+  return <div className="admin-item-list">{items.map((item) => <article className="admin-item" key={String(item.id)}><div><h2>{String(item.title ?? item.name ?? item.author ?? item.quote ?? "Untitled")}</h2><p>{String(item.summary ?? item.description ?? item.category ?? item.company ?? "")}</p><Badge variant={item.published ? "default" : "outline"} className={`admin-status${item.published ? " published" : ""}`}>{item.published ? "Published" : "Draft"}</Badge></div><div className="admin-item-actions"><Button variant="outline" onClick={() => onEdit(item)} aria-label="Edit item">Edit</Button><Button variant="destructive" className="danger" onClick={() => onDelete(item)} aria-label="Delete item"><Trash2 size={15} /></Button></div></article>)}</div>;
 }

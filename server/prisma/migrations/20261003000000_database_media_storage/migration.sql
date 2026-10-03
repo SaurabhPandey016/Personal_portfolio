@@ -1,0 +1,3 @@
+ALTER TABLE "Media"
+ADD COLUMN "originalName" TEXT,
+ADD COLUMN "data" BYTEA;

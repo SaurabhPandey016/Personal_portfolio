@@ -13,6 +13,7 @@ const app = express();
 const clientOrigins = new Set((process.env.CLIENT_ORIGIN || "http://localhost:3000,http://127.0.0.1:3000").split(",").map((origin) => origin.trim()));
 
 app.disable("x-powered-by");
+app.set("trust proxy", process.env.NODE_ENV === "production" ? 1 : false);
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({
   origin(origin, callback) {

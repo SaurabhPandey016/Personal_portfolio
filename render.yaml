@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: saurabh-portfolio-api
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm ci && npm run db:generate
+    startCommand: npm run db:migrate:deploy && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: ADMIN_NAME
+        value: Saurabh Pandey
+      - key: ADMIN_EMAIL
+        value: developersaurabh001@gmail.com
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: SMTP_HOST
+        value: smtp-relay.brevo.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: CONTACT_TO
+        sync: false

@@ -8,9 +8,9 @@ const router = Router();
 const contactLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 8, standardHeaders: "draft-8", legacyHeaders: false });
 
 router.post("/contact", contactLimiter, async (request, response, next) => {
-  const name = String(request.body?.name ?? "").trim();
+  const name = String(request.body?.name ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
   const email = String(request.body?.email ?? "").trim().toLowerCase();
-  const subject = String(request.body?.subject ?? "").trim();
+  const subject = String(request.body?.subject ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
   const message = String(request.body?.message ?? "").trim();
   if (name.length < 2 || name.length > 120 || !/^\S+@\S+\.\S+$/.test(email) || message.length < 5 || message.length > 10000) {
     return response.status(400).json({ error: "Enter a valid name, email address, and message." });
@@ -19,27 +19,35 @@ router.post("/contact", contactLimiter, async (request, response, next) => {
   try {
     const saved = await prisma.message.create({ data: { name, email, subject: subject.slice(0, 180) || null, message } });
     let emailSent = false;
-    if (process.env.SMTP_HOST && process.env.CONTACT_TO) {
+    let emailStatus = "not_configured";
+    const smtpConfigured = ["SMTP_HOST", "SMTP_USER", "SMTP_FROM", "CONTACT_TO"].every((key) => process.env[key]?.trim()) && Boolean(process.env.SMTP_PASS);
+    if (smtpConfigured) {
+      const port = Number(process.env.SMTP_PORT) || 587;
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === "true",
-        auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+        port,
+        secure: process.env.SMTP_SECURE === "true" || port === 465,
+        requireTLS: port === 587,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
       });
       try {
         await transporter.sendMail({
-          from: process.env.SMTP_FROM || process.env.SMTP_USER,
+          from: process.env.SMTP_FROM,
           to: process.env.CONTACT_TO,
           replyTo: email,
           subject: subject || `Portfolio message from ${name}`,
           text: `From: ${name} <${email}>\n\n${message}`,
         });
         emailSent = true;
-      } catch {
-        console.error("Contact email delivery failed.");
+        emailStatus = "sent";
+      } catch (error) {
+        emailStatus = "failed";
+        const code = typeof error === "object" && error && "code" in error ? String(error.code) : "UNKNOWN";
+        const responseCode = typeof error === "object" && error && "responseCode" in error ? String(error.responseCode) : undefined;
+        console.error("Contact email delivery failed.", { code, responseCode });
       }
     }
-    return response.status(201).json({ message: "Message received.", id: saved.id, emailSent });
+    return response.status(201).json({ message: "Message received.", id: saved.id, emailSent, emailStatus });
   } catch (error) {
     return next(error);
   }
