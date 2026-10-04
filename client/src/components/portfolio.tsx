@@ -88,13 +88,21 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
         body: JSON.stringify(message),
         signal: AbortSignal.timeout(90_000),
       });
-      const result = await response.json().catch(() => ({})) as { message?: string; error?: string; emailSent?: boolean; emailStatus?: "sent" | "failed" | "not_configured" };
+      const result = await response.json().catch(() => ({})) as { message?: string; error?: string; emailSent?: boolean; emailStatus?: "sent" | "failed" | "not_configured"; emailError?: string | null };
       if (!response.ok) throw new Error(result.error || "The message could not be sent. Please try again.");
       formElement.reset();
       setFormStatus(result.emailStatus === "sent"
-        ? "Your message has been sent successfully. I’ll get back to you soon."
+        ? "Your message was received and the email provider accepted its notification. I’ll get back to you soon."
         : result.emailStatus === "failed"
-          ? "Your message was saved, but its email notification could not be delivered. Please contact me directly by email."
+          ? result.emailError === "BREVO_API_KEY_MISSING"
+            ? "Your message was saved, but email notifications are not configured on the server. Add BREVO_API_KEY to the Render Web Service environment and redeploy."
+            : result.emailError === "SMTP_CONNECTION"
+            ? "Your message was saved, but the hosting service could not reach SMTP. Configure a Brevo API key in Render to send notifications over HTTPS."
+            : result.emailError === "BREVO_AUTH"
+              ? "Your message was saved, but Brevo rejected the API key. Check the BREVO_API_KEY in Render."
+              : result.emailError === "BREVO_SENDER"
+                ? "Your message was saved, but Brevo rejected the sender address. Verify SMTP_FROM as a sender in Brevo."
+                : "Your message was saved, but the email provider could not deliver its notification. Please check the CMS Messages section."
           : result.emailStatus === "not_configured"
             ? "Your message was saved, but email notifications are not configured."
             : "Your message was received. I’ll get back to you soon.");

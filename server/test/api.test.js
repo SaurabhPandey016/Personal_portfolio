@@ -485,13 +485,14 @@ test("authenticated uploads store arbitrary files in PostgreSQL without returnin
 });
 
 test("contact submissions are saved when SMTP credentials are missing", async (context) => {
-  const keys = ["SMTP_HOST", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "CONTACT_TO"];
+  const keys = ["SMTP_HOST", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "CONTACT_TO", "BREVO_API_KEY"];
   const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
   process.env.SMTP_HOST = "smtp.example.test";
   process.env.SMTP_USER = "sender@example.test";
   delete process.env.SMTP_PASS;
   process.env.SMTP_FROM = "sender@example.test";
   process.env.CONTACT_TO = "owner@example.test";
+  delete process.env.BREVO_API_KEY;
   const restoreCreate = replacePrismaMethod(prisma.message, "create", async ({ data }) => ({ id: "test-message", ...data }));
   context.after(() => {
     restoreCreate();
@@ -512,11 +513,12 @@ test("contact submissions are saved when SMTP credentials are missing", async (c
     id: "test-message",
     emailSent: false,
     emailStatus: "not_configured",
+    emailError: null,
   });
 });
 
 test("contact email is sent to CONTACT_TO with visitor reply-to and delivery status", async (context) => {
-  const keys = ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "CONTACT_TO"];
+  const keys = ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "CONTACT_TO", "BREVO_API_KEY"];
   const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
   const smtp = await createSmtpTestServer();
   process.env.SMTP_HOST = "127.0.0.1";
@@ -526,6 +528,7 @@ test("contact email is sent to CONTACT_TO with visitor reply-to and delivery sta
   process.env.SMTP_PASS = "test-password";
   process.env.SMTP_FROM = "verified-sender@example.test";
   process.env.CONTACT_TO = "developersaurabh04@gmail.com";
+  delete process.env.BREVO_API_KEY;
   const savedMessages = [];
   const restoreCreate = replacePrismaMethod(prisma.message, "create", async ({ data }) => {
     const saved = { id: "smtp-test-message", ...data };
@@ -552,6 +555,7 @@ test("contact email is sent to CONTACT_TO with visitor reply-to and delivery sta
     id: "smtp-test-message",
     emailSent: true,
     emailStatus: "sent",
+    emailError: null,
   });
   assert.equal(savedMessages.length, 1);
   assert.deepEqual(smtp.recipients, ["developersaurabh04@gmail.com"]);
@@ -559,7 +563,7 @@ test("contact email is sent to CONTACT_TO with visitor reply-to and delivery sta
 });
 
 test("contact email failure is bounded and the message is still saved", async (context) => {
-  const keys = ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "CONTACT_TO"];
+  const keys = ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "CONTACT_TO", "BREVO_API_KEY"];
   const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
   const smtp = await createSmtpTestServer();
   const closedPort = smtp.port;
@@ -571,6 +575,7 @@ test("contact email failure is bounded and the message is still saved", async (c
   process.env.SMTP_PASS = "test-password";
   process.env.SMTP_FROM = "verified-sender@example.test";
   process.env.CONTACT_TO = "owner@example.test";
+  delete process.env.BREVO_API_KEY;
   const restoreCreate = replacePrismaMethod(prisma.message, "create", async ({ data }) => ({ id: "saved-despite-smtp-failure", ...data }));
   context.after(() => {
     restoreCreate();
@@ -591,5 +596,134 @@ test("contact email failure is bounded and the message is still saved", async (c
     id: "saved-despite-smtp-failure",
     emailSent: false,
     emailStatus: "failed",
+    emailError: "SMTP_CONNECTION",
+  });
+});
+
+test("contact notifications use Brevo HTTPS API when configured", async (context) => {
+  const keys = ["SMTP_HOST", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "CONTACT_TO", "BREVO_API_KEY"];
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  process.env.SMTP_FROM = "Portfolio <verified-sender@example.test>";
+  process.env.CONTACT_TO = "owner@example.test";
+  process.env.BREVO_API_KEY = "test-brevo-api-key";
+  delete process.env.SMTP_HOST;
+  delete process.env.SMTP_USER;
+  delete process.env.SMTP_PASS;
+  const nativeFetch = globalThis.fetch;
+  let requestUrl;
+  let requestOptions;
+  globalThis.fetch = async (input, init) => {
+    if (String(input).startsWith("https://api.brevo.com/")) {
+      requestUrl = String(input);
+      requestOptions = init;
+      return new Response(JSON.stringify({ messageId: "test-provider-id" }), { status: 201 });
+    }
+    return nativeFetch(input, init);
+  };
+  const restoreCreate = replacePrismaMethod(prisma.message, "create", async ({ data }) => ({ id: "brevo-api-test-message", ...data }));
+  context.after(() => {
+    globalThis.fetch = nativeFetch;
+    restoreCreate();
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  });
+
+  const response = await nativeFetch(`${origin}/api/contact`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "Contact Test", email: "visitor@example.test", message: "HTTPS API test." }),
+  });
+  assert.equal(response.status, 201);
+  assert.deepEqual(await response.json(), {
+    message: "Message received.",
+    id: "brevo-api-test-message",
+    emailSent: true,
+    emailStatus: "sent",
+    emailError: null,
+  });
+  assert.equal(requestUrl, "https://api.brevo.com/v3/smtp/email");
+  assert.equal(requestOptions.headers["api-key"], "test-brevo-api-key");
+  assert.deepEqual(JSON.parse(requestOptions.body), {
+    sender: { name: "Portfolio", email: "verified-sender@example.test" },
+    to: [{ email: "owner@example.test" }],
+    replyTo: { email: "visitor@example.test" },
+    subject: "Portfolio message from Contact Test",
+    textContent: "From: Contact Test <visitor@example.test>\n\nHTTPS API test.",
+  });
+});
+
+test("contact notifications report an invalid Brevo API key without dropping the saved message", async (context) => {
+  const keys = ["SMTP_FROM", "CONTACT_TO", "BREVO_API_KEY"];
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  process.env.SMTP_FROM = "verified-sender@example.test";
+  process.env.CONTACT_TO = "owner@example.test";
+  process.env.BREVO_API_KEY = "invalid-test-api-key";
+  const nativeFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (String(input).startsWith("https://api.brevo.com/")) {
+      assert.equal(init.headers["api-key"], "invalid-test-api-key");
+      return new Response(JSON.stringify({ code: "unauthorized" }), { status: 401 });
+    }
+    return nativeFetch(input, init);
+  };
+  const restoreCreate = replacePrismaMethod(prisma.message, "create", async ({ data }) => ({ id: "saved-with-invalid-api-key", ...data }));
+  context.after(() => {
+    globalThis.fetch = nativeFetch;
+    restoreCreate();
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  });
+
+  const response = await nativeFetch(`${origin}/api/contact`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "Contact Test", email: "visitor@example.test", message: "API key failure test." }),
+  });
+  assert.equal(response.status, 201);
+  assert.deepEqual(await response.json(), {
+    message: "Message received.",
+    id: "saved-with-invalid-api-key",
+    emailSent: false,
+    emailStatus: "failed",
+    emailError: "BREVO_AUTH",
+  });
+});
+
+test("production contact notifications never fall back to blocked SMTP", async (context) => {
+  const keys = ["NODE_ENV", "RENDER", "SMTP_HOST", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "CONTACT_TO", "BREVO_API_KEY"];
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  process.env.NODE_ENV = "production";
+  delete process.env.RENDER;
+  process.env.SMTP_HOST = "smtp-relay.brevo.com";
+  process.env.SMTP_USER = "test-sender";
+  process.env.SMTP_PASS = "test-smtp-password";
+  process.env.SMTP_FROM = "verified-sender@example.test";
+  process.env.CONTACT_TO = "owner@example.test";
+  delete process.env.BREVO_API_KEY;
+  const restoreCreate = replacePrismaMethod(prisma.message, "create", async ({ data }) => ({ id: "saved-without-api-key", ...data }));
+  context.after(() => {
+    restoreCreate();
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  });
+
+  const response = await fetch(`${origin}/api/contact`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "Contact Test", email: "visitor@example.test", message: "Production configuration test." }),
+  });
+  assert.equal(response.status, 201);
+  assert.deepEqual(await response.json(), {
+    message: "Message received.",
+    id: "saved-without-api-key",
+    emailSent: false,
+    emailStatus: "failed",
+    emailError: "BREVO_API_KEY_MISSING",
   });
 });
