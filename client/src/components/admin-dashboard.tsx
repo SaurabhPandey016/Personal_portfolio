@@ -130,6 +130,7 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
   const [savingMessageId, setSavingMessageId] = useState<string | null>(null);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [login, setLogin] = useState({ email: "", password: "" });
@@ -304,6 +305,24 @@ export default function AdminDashboard() {
     }
   }
 
+  async function handleDeleteMessage(item: CmsRecord) {
+    const id = String(item.id);
+    const sender = String(item.name ?? "this sender");
+    if (!window.confirm(`Permanently delete the message from ${sender}? This cannot be undone.`)) return;
+    setDeletingMessageId(id);
+    setError("");
+    try {
+      await request(`/messages/${id}`, { method: "DELETE" });
+      setItems((currentItems) => currentItems.filter((currentItem) => currentItem.id !== id));
+      setCounts((currentCounts) => ({ ...currentCounts, messages: Math.max(0, (currentCounts.messages ?? 0) - 1) }));
+      setNotice("Message deleted.");
+    } catch (deleteError) {
+      setError((deleteError as Error).message);
+    } finally {
+      setDeletingMessageId(null);
+    }
+  }
+
   async function handleCopyMediaUrl(url: string) {
     setError("");
     try {
@@ -366,7 +385,7 @@ export default function AdminDashboard() {
             {section.single ? <form className="admin-editor" onSubmit={handleSave}><RecordFields fields={section.fields} draft={draft} setDraft={setDraft} mediaLibrary={mediaLibrary} /><Button type="submit" className="admin-primary" disabled={busy}><Save size={15} /> Save profile</Button></form> : formOpen ? <form className="admin-editor" onSubmit={handleSave}><div className="admin-editor-heading"><h2>{editingId ? "Edit item" : `New ${section.label.slice(0, -1)}`}</h2><button type="button" className="admin-text-button" onClick={() => setFormOpen(false)}>Cancel</button></div><RecordFields fields={section.fields} draft={draft} setDraft={setDraft} mediaLibrary={mediaLibrary} /><Button type="submit" className="admin-primary" disabled={busy}><Save size={15} /> {busy ? "Saving..." : "Save changes"}</Button></form> : <ItemList items={items} resource={activeKey} onEdit={openEditForm} onDelete={handleDelete} />}
           </>}
 
-          {activeKey === "messages" && <div className="admin-message-list">{items.map((item) => <article className="admin-message" key={String(item.id)}><div><div className="admin-message-meta"><strong>{String(item.name)}</strong><a href={`mailto:${String(item.email)}`}>{String(item.email)}</a><span>{new Date(String(item.createdAt)).toLocaleDateString()}</span></div><p>{String(item.message)}</p>{item.subject && <span className="admin-message-subject">{String(item.subject)}</span>}</div><select aria-label={`Status for message from ${String(item.name)}`} value={String(item.status)} disabled={savingMessageId === String(item.id)} onChange={(event) => { const status = event.currentTarget.value; setSavingMessageId(String(item.id)); void handleMessageStatusChange(String(item.id), status); }}><option value="NEW">New</option><option value="READ">Read</option><option value="ARCHIVED">Archived</option></select></article>)}{items.length === 0 && <p className="admin-empty">No messages yet.</p>}</div>}
+          {activeKey === "messages" && <div className="admin-message-list">{items.map((item) => <article className="admin-message" key={String(item.id)}><div><div className="admin-message-meta"><strong>{String(item.name)}</strong><a href={`mailto:${String(item.email)}`}>{String(item.email)}</a><span>{new Date(String(item.createdAt)).toLocaleDateString()}</span></div><p>{String(item.message)}</p>{item.subject && <span className="admin-message-subject">{String(item.subject)}</span>}</div><div className="admin-message-actions"><select aria-label={`Status for message from ${String(item.name)}`} value={String(item.status)} disabled={savingMessageId === String(item.id) || deletingMessageId === String(item.id)} onChange={(event) => { const status = event.currentTarget.value; setSavingMessageId(String(item.id)); void handleMessageStatusChange(String(item.id), status); }}><option value="NEW">New</option><option value="READ">Read</option><option value="ARCHIVED">Archived</option></select><Button type="button" variant="destructive" className="admin-message-delete" aria-label={`Delete message from ${String(item.name)}`} disabled={deletingMessageId === String(item.id) || savingMessageId === String(item.id)} onClick={() => { void handleDeleteMessage(item); }}><Trash2 size={15} />{deletingMessageId === String(item.id) ? "Deleting..." : "Delete"}</Button></div></article>)}{items.length === 0 && <p className="admin-empty">No messages yet.</p>}</div>}
 
           {activeKey === "media" && <>
             <form className="admin-upload" onSubmit={handleUpload}>

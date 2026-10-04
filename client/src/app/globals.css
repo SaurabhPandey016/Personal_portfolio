@@ -419,7 +419,10 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .admin-item-actions .danger { display: grid; width: 32px; place-items: center; color: var(--accent); }
 .admin-empty { padding: 24px 0; color: var(--ink-soft); font-size: 11px; }
 .admin-message-list { display: grid; gap: 10px; }
-.admin-message { display: grid; grid-template-columns: 1fr 115px; gap: 18px; padding: 17px; border: 1px solid var(--line); background: #121212; }
+.admin-message { display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 18px; padding: 17px; border: 1px solid var(--line); background: #121212; }
+.admin-message-actions { display: grid; align-content: start; gap: 9px; }
+.admin-message-actions select { width: 100%; }
+.admin-message-delete { display: inline-flex; min-height: 34px; align-items: center; justify-content: center; gap: 7px; font-size: 10px; }
 .admin-message-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; font-size: 10px; }
 .admin-message-meta a { color: var(--accent); }
 .admin-message-meta span { color: var(--ink-soft); font-size: 9px; }

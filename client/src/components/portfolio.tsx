@@ -82,21 +82,29 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
     const message = Object.fromEntries(new FormData(formElement).entries());
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:10000/api"}/contact`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL?.trim() || "/api"}/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(message),
+        signal: AbortSignal.timeout(90_000),
       });
-      if (!response.ok) throw new Error("The message could not be sent.");
-      const result = await response.json() as { emailSent?: boolean; emailStatus?: "sent" | "failed" | "not_configured" };
+      const result = await response.json().catch(() => ({})) as { message?: string; error?: string; emailSent?: boolean; emailStatus?: "sent" | "failed" | "not_configured" };
+      if (!response.ok) throw new Error(result.error || "The message could not be sent. Please try again.");
       formElement.reset();
       setFormStatus(result.emailStatus === "sent"
-        ? "Thanks for reaching out. Your note is on its way."
+        ? "Your message has been sent successfully. I’ll get back to you soon."
         : result.emailStatus === "failed"
-          ? "Your message was saved, but its email notification could not be delivered. Please use LinkedIn or GitHub to follow up."
-          : "Your message was saved. Email notifications are not configured yet.");
-    } catch {
-      setFormStatus("The message API is unavailable. Please reach me through LinkedIn or GitHub.");
+          ? "Your message was saved, but its email notification could not be delivered. Please contact me directly by email."
+          : result.emailStatus === "not_configured"
+            ? "Your message was saved, but email notifications are not configured."
+            : "Your message was received. I’ll get back to you soon.");
+    } catch (error) {
+      const errorName = error instanceof Error ? error.name : "";
+      setFormStatus(errorName === "TimeoutError"
+        ? "The message service took too long to respond. Your message may have been received; please check before sending it again."
+        : error instanceof Error
+          ? error.message
+          : "We couldn’t confirm delivery. Please try again or contact me directly by email.");
     } finally {
       setSending(false);
     }
@@ -167,7 +175,7 @@ export default function Portfolio({ content }: { content: PortfolioData }) {
         <section className="contact-section" id="contact"><div className="wrap">
           <span className="eyebrow">Open to opportunities</span>
           <div className="contact-layout"><div><h2>Let&apos;s build<br />something <em>useful.</em></h2><p className="contact-intro">I&apos;m looking for entry-level, internship, and associate opportunities in software engineering, frontend, and full-stack development.</p>{contactEmail && <a className="contact-email" href={`mailto:${contactEmail}`}>{contactEmail} <ArrowUpRight aria-hidden="true" /></a>}<a className="contact-email" href="tel:+918720026790"><Phone aria-hidden="true" /> +91 87200 26790</a></div>
-            <form className="contact-form" onSubmit={handleContact}><div className="form-row"><label>Your name<Input name="name" autoComplete="name" placeholder="How should I address you?" required /></label><label>Email address<Input name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></label></div><label>What are you thinking about?<Textarea name="message" placeholder="A few lines is plenty..." required rows={5} /></label><Button className="submit-button" type="submit" disabled={sending}>{sending ? "Sending..." : "Send a note"}{formStatus.startsWith("Thanks") ? <Check /> : <Send />}</Button><p className="form-status" aria-live="polite">{formStatus}</p></form>
+            <form className="contact-form" onSubmit={handleContact} aria-busy={sending}><div className="form-row"><label>Your name<Input name="name" autoComplete="name" placeholder="How should I address you?" required disabled={sending} /></label><label>Email address<Input name="email" type="email" autoComplete="email" placeholder="you@example.com" required disabled={sending} /></label></div><label>What are you thinking about?<Textarea name="message" placeholder="A few lines is plenty..." required rows={5} disabled={sending} /></label><Button className="submit-button" type="submit" disabled={sending}>{sending ? "Sending..." : "Send a note"}{formStatus.startsWith("Your message has been sent") ? <Check /> : <Send />}</Button><p className="form-status" aria-live="polite">{formStatus}</p></form>
           </div>
         </div></section>
       </main>
